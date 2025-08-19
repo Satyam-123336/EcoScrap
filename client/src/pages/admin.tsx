@@ -68,7 +68,7 @@ export default function Admin() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-2xl font-bold text-gray-900">{stats?.pending || 0}</div>
+                  <div className="text-2xl font-bold text-gray-900">{(stats as any)?.pending || 0}</div>
                   <div className="text-sm text-gray-600">Pending Requests</div>
                 </div>
                 <Clock className="w-8 h-8 text-eco-amber" />
@@ -80,7 +80,7 @@ export default function Admin() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-2xl font-bold text-gray-900">{stats?.inProgress || 0}</div>
+                  <div className="text-2xl font-bold text-gray-900">{(stats as any)?.inProgress || 0}</div>
                   <div className="text-sm text-gray-600">In Progress</div>
                 </div>
                 <Zap className="w-8 h-8 text-eco-blue" />
@@ -92,7 +92,7 @@ export default function Admin() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-2xl font-bold text-gray-900">{stats?.completedToday || 0}</div>
+                  <div className="text-2xl font-bold text-gray-900">{(stats as any)?.completedToday || 0}</div>
                   <div className="text-sm text-gray-600">Completed Today</div>
                 </div>
                 <CheckCircle className="w-8 h-8 text-green-600" />
@@ -104,7 +104,7 @@ export default function Admin() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-2xl font-bold text-gray-900">{stats?.totalPickups || 0}</div>
+                  <div className="text-2xl font-bold text-gray-900">{(stats as any)?.totalPickups || 0}</div>
                   <div className="text-sm text-gray-600">Total Pickups</div>
                 </div>
                 <DollarSign className="w-8 h-8 text-eco-primary" />
@@ -132,7 +132,7 @@ export default function Admin() {
           </CardHeader>
           <CardContent>
             <PickupTable
-              requests={pickupRequests || []}
+              requests={(pickupRequests as any) || []}
               onComplete={handleCompletePickup}
               isLoading={completePickupMutation.isPending}
             />

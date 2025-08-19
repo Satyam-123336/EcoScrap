@@ -37,7 +37,7 @@ export default function Rewards({ user }: RewardsProps) {
     queryKey: ['/api/certificates/user', user.id],
   });
 
-  const completedPickups = pickups?.filter((pickup: any) => pickup.status === 'completed') || [];
+  const completedPickups = (pickups as any)?.filter((pickup: any) => pickup.status === 'completed') || [];
   const totalCO2Saved = completedPickups.reduce((sum: number, pickup: any) => 
     sum + (parseFloat(pickup.weight) * 0.4), 0
   );
@@ -137,13 +137,13 @@ export default function Rewards({ user }: RewardsProps) {
             </div>
           </CardHeader>
           <CardContent>
-            {!certificates || certificates.length === 0 ? (
+            {!(certificates as any) || (certificates as any).length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 No certificates earned yet. Complete your first pickup to get started!
               </div>
             ) : (
               <div className="space-y-4">
-                {certificates.map((cert: any) => (
+                {(certificates as any).map((cert: any) => (
                   <div key={cert.id} className="bg-white rounded-lg p-4 border border-green-100">
                     <div className="flex items-center justify-between">
                       <div>

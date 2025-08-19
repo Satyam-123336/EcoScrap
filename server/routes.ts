@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertUserSchema, loginSchema, insertPickupRequestSchema } from "@shared/schema";
 import bcrypt from "bcryptjs";
-import multer from "multer";
+import multer, { FileFilterCallback } from "multer";
 import path from "path";
 
 // Configure multer for file uploads
@@ -12,7 +12,7 @@ const upload = multer({
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (req: any, file: Express.Multer.File, cb: FileFilterCallback) => {
     const allowedTypes = /jpeg|jpg|png/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
@@ -28,6 +28,7 @@ const upload = multer({
 // Session middleware (simplified for demo)
 interface AuthenticatedRequest extends Request {
   user?: { id: string };
+  file?: Express.Multer.File;
 }
 
 const authenticateUser = (req: AuthenticatedRequest, res: Response, next: Function) => {
@@ -125,7 +126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Pickup request routes
-  app.post("/api/pickup-requests", upload.single('photo'), async (req, res) => {
+  app.post("/api/pickup-requests", upload.single('photo'), async (req: AuthenticatedRequest, res) => {
     try {
       const requestData = {
         ...req.body,

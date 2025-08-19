@@ -67,25 +67,25 @@ export default function Home({ user }: HomeProps) {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="text-center">
               <div className="text-3xl font-bold text-eco-primary mb-2">
-                {stats?.totalPickups || 0}
+                {(stats as any)?.totalPickups || 0}
               </div>
               <div className="text-gray-600">Total Pickups</div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-eco-primary mb-2">
-                {stats?.wasteCollected || "0 kg"}
+                {(stats as any)?.wasteCollected || "0 kg"}
               </div>
               <div className="text-gray-600">E-Waste Collected</div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-eco-primary mb-2">
-                {stats?.activeUsers || 0}
+                {(stats as any)?.activeUsers || 0}
               </div>
               <div className="text-gray-600">Active Users</div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-eco-primary mb-2">
-                {stats?.carbonSaved || "0 kg"}
+                {(stats as any)?.carbonSaved || "0 kg"}
               </div>
               <div className="text-gray-600">CO₂ Saved</div>
             </div>

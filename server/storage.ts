@@ -36,12 +36,14 @@ export class MemStorage implements IStorage {
   }
 
   private async createDefaultAdmin() {
+    const bcrypt = await import('bcryptjs');
     const adminId = randomUUID();
+    const hashedPassword = await bcrypt.hash("admin123", 10);
     const admin: User = {
       id: adminId,
       username: "admin",
       email: "admin@ecoscrap.com",
-      password: "$2b$10$K8Q8K8K8K8K8K8K8K8K8KuO8K8K8K8K8K8K8K8K8K8K8K8K8K8K8K", // "admin123"
+      password: hashedPassword,
       name: "System Administrator",
       phone: "+1 (555) 000-0000",
       address: "EcoScrap HQ, San Francisco, CA",
@@ -114,6 +116,8 @@ export class MemStorage implements IStorage {
       pointsAwarded: 0,
       createdAt: new Date(),
       completedAt: null,
+      photoUrl: insertRequest.photoUrl || null,
+      aiVerification: insertRequest.aiVerification || null,
     };
     this.pickupRequests.set(id, request);
     return request;

@@ -137,8 +137,8 @@ export default function RequestForm({ user }: RequestFormProps) {
     form.setValue("eWasteType", typeId);
   };
 
-  const proceedToPhotoUpload = () => {
-    const isValid = form.trigger();
+  const proceedToPhotoUpload = async () => {
+    const isValid = await form.trigger();
     if (isValid) {
       setCurrentStep(2);
     }
