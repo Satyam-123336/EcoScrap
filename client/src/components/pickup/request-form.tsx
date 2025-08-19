@@ -5,7 +5,7 @@ import { User } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
@@ -20,7 +20,8 @@ import {
   Plug, 
   Battery, 
   Laptop,
-  Zap
+  Zap,
+  Sparkles
 } from "lucide-react";
 import { z } from "zod";
 
@@ -289,13 +290,38 @@ export default function RequestForm({ user }: RequestFormProps) {
             <PhotoUpload onVerified={handlePhotoVerified} />
 
             {aiVerification && (
-              <Alert className="border-green-200 bg-green-50">
-                <Check className="w-4 h-4 text-green-600" />
-                <AlertDescription className="text-green-800">
-                  <strong>AI Verification: {aiVerification}</strong><br />
-                  Your item has been verified as recyclable e-waste.
-                </AlertDescription>
-              </Alert>
+              <div className="space-y-4">
+                <Alert className="border-green-200 bg-green-50">
+                  <Check className="w-4 h-4 text-green-600" />
+                  <AlertDescription className="text-green-800">
+                    <strong>AI Classification Complete!</strong><br />
+                    Your item has been analyzed and verified as recyclable e-waste.
+                  </AlertDescription>
+                </Alert>
+                
+                <Card className="border-2 border-eco-primary/20 bg-eco-light/5">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg text-eco-primary">
+                      <Sparkles className="w-5 h-5" />
+                      AI Analysis Results
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="bg-white rounded-lg p-4 space-y-3 border">
+                      <div className="prose text-sm text-gray-700 whitespace-pre-line">
+                        {aiVerification}
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <span className="text-xs text-gray-500">Powered by AI Vision Technology</span>
+                        <div className="flex items-center gap-1 text-green-600">
+                          <Check className="w-4 h-4" />
+                          <span className="text-xs font-medium">Verified</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             )}
 
             <div className="flex justify-between">

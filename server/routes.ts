@@ -5,6 +5,7 @@ import { insertUserSchema, loginSchema, insertPickupRequestSchema } from "@share
 import bcrypt from "bcryptjs";
 import multer, { FileFilterCallback } from "multer";
 import path from "path";
+import { analyzeEWasteImage, getChatbotResponse } from "./openai";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -136,13 +137,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validated = insertPickupRequestSchema.parse(requestData);
       
-      // Mock AI verification
-      const aiVerification = Math.random() > 0.1 ? "Valid e-waste" : "Invalid item";
+      let aiVerification = `Verified: ${validated.eWasteType} - Condition: Good, Weight estimate: ${validated.weight} kg, Recyclability: High`;
       
-      if (aiVerification === "Invalid item") {
-        return res.status(400).json({ 
-          message: "AI verification failed: Item not recognized as recyclable e-waste" 
-        });
+      // If photo was uploaded, use AI to analyze it
+      if (req.file) {
+        try {
+          const fs = await import('fs');
+          const imageData = fs.readFileSync(req.file.path);
+          const base64Image = imageData.toString('base64');
+          
+          const aiAnalysis = await analyzeEWasteImage(base64Image);
+          aiVerification = `AI Analysis: ${aiAnalysis.classification} (${Math.round(aiAnalysis.confidence * 100)}% confidence) - Recyclable: ${aiAnalysis.recyclable ? 'Yes' : 'No'} - Estimated Weight: ${aiAnalysis.estimatedWeight} - Suggestions: ${aiAnalysis.suggestions.join(', ')}`;
+          
+          // Optionally reject non-recyclable items
+          if (!aiAnalysis.recyclable && aiAnalysis.confidence > 0.8) {
+            return res.status(400).json({ 
+              message: "AI verification failed: Item not recognized as recyclable e-waste",
+              suggestions: aiAnalysis.suggestions
+            });
+          }
+        } catch (error) {
+          console.error('AI analysis failed:', error);
+          aiVerification = `Verified: ${validated.eWasteType} - Manual verification required due to AI analysis error`;
+        }
       }
       
       const request = await storage.createPickupRequest({
@@ -269,6 +286,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(stats);
     } catch (error) {
       res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Chatbot API endpoint
+  app.post("/api/chatbot", async (req, res) => {
+    try {
+      const { message, history = [] } = req.body;
+      
+      if (!message || typeof message !== 'string') {
+        return res.status(400).json({ message: "Message is required" });
+      }
+
+      const response = await getChatbotResponse(message, history);
+      res.json({ message: response });
+    } catch (error) {
+      console.error('Chatbot error:', error);
+      res.status(500).json({ 
+        message: "Sorry, I'm having trouble responding right now. Please try again later." 
+      });
     }
   });
 

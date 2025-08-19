@@ -29,7 +29,8 @@ export default function Login() {
     
     try {
       await authManager.login(data);
-      // Navigation will be handled by App.tsx state change
+      // Force a page reload to trigger App.tsx re-render
+      window.location.reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {

@@ -17,6 +17,7 @@ import Rewards from "@/pages/rewards";
 import Profile from "@/pages/profile";
 import Admin from "@/pages/admin";
 import NotFound from "@/pages/not-found";
+import Chatbot from "@/components/chatbot/chatbot";
 
 function Router() {
   const [user, setUser] = useState<User | null>(null);
@@ -27,6 +28,14 @@ function Router() {
       setUser(user);
       setLoading(false);
     });
+
+    // Listen for auth changes
+    const handleStorageChange = () => {
+      authManager.loadUser().then(setUser);
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   if (loading) {
@@ -66,6 +75,7 @@ function Router() {
       </main>
       
       <Footer />
+      <Chatbot />
     </div>
   );
 }

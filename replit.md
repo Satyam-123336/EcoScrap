@@ -56,6 +56,10 @@ Preferred communication style: Simple, everyday language.
 
 ## External Dependencies
 
+### AI and Machine Learning
+- **OpenAI API**: Powers the intelligent chatbot assistant and advanced e-waste image classification system
+- **GPT-4o Model**: Latest multimodal AI model for accurate image analysis and natural language conversations
+
 ### UI and Styling
 - **Radix UI**: Accessible component primitives for complex UI interactions
 - **Tailwind CSS**: Utility-first CSS framework for rapid styling
@@ -65,7 +69,7 @@ Preferred communication style: Simple, everyday language.
 ### Backend Services
 - **Neon Database**: Serverless PostgreSQL database provider
 - **Bcryptjs**: Password hashing and verification
-- **Multer**: File upload middleware for Express
+- **Multer**: File upload middleware for Express with TypeScript support
 - **Connect PG Simple**: PostgreSQL session store (configured but not actively used)
 
 ### Development Tools
@@ -82,3 +86,16 @@ Preferred communication style: Simple, everyday language.
 ### State Management
 - **TanStack Query**: Server state management with caching, background updates, and optimistic updates
 - **Date-fns**: Date manipulation and formatting utilities
+
+## Recent Updates (August 19, 2025)
+
+### New Features Added
+- **AI-Powered Chatbot Assistant**: Floating chatbot widget powered by OpenAI GPT-4o that helps users with e-waste questions, recycling tips, and platform guidance
+- **Enhanced AI Image Classification**: Advanced computer vision system that analyzes uploaded e-waste photos and provides detailed classification with confidence scores, recyclability assessment, estimated weight, and disposal suggestions
+- **Improved User Authentication**: Fixed login state persistence and session management for seamless user experience
+
+### Technical Improvements
+- **OpenAI Integration**: Added comprehensive AI services with proper error handling and fallback mechanisms
+- **Enhanced UI Components**: Prominent display of AI analysis results with professional styling and clear visual indicators
+- **TypeScript Compliance**: Resolved all TypeScript errors and added proper type definitions for multer and other dependencies
+- **Real-time Features**: Chatbot with conversation history and typing indicators for better user experience
