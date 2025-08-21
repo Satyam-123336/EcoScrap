@@ -68,13 +68,18 @@ class AuthManager {
         const user = await response.json();
         this.setCurrentUser(user);
         return user;
+      } else {
+        // If user not found or other error, clear localStorage and return null
+        console.log('User not found, clearing stored session');
+        this.logout();
+        return null;
       }
     } catch (error) {
       console.error('Failed to load user:', error);
+      // On network error, also clear session
+      this.logout();
+      return null;
     }
-
-    this.logout();
-    return null;
   }
 }
 

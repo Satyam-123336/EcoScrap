@@ -24,10 +24,23 @@ function Router() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    authManager.loadUser().then(user => {
-      setUser(user);
-      setLoading(false);
-    });
+    // Add timeout to prevent infinite loading
+    const loadUserWithTimeout = async () => {
+      try {
+        const user = await Promise.race([
+          authManager.loadUser(),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)) // 5 second timeout
+        ]);
+        setUser(user);
+      } catch (error) {
+        console.error('Error loading user:', error);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUserWithTimeout();
 
     // Listen for auth changes
     const handleStorageChange = () => {
@@ -40,8 +53,13 @@ function Router() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-eco-primary">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-eco-primary to-eco-green">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-6 h-6 border-2 border-eco-primary border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <div className="text-white text-lg font-medium">Loading EcoScrap Pickup...</div>
+        </div>
       </div>
     );
   }
