@@ -50,7 +50,18 @@ class AuthManager {
     }
 
     const user = await response.json();
+    
+    
+    localStorage.setItem('currentUserId', user.id);
+    
+    
     this.setCurrentUser(user);
+
+    setTimeout(() => {
+      
+      window.location.replace('/');
+    }, 50);
+    
     return user;
   }
 
@@ -59,24 +70,27 @@ class AuthManager {
   }
 
   async loadUser(): Promise<User | null> {
-    const userId = localStorage.getItem('currentUserId');
-    if (!userId) return null;
-
     try {
+      const userId = localStorage.getItem('currentUserId');
+      if (!userId) {
+        this.logout();
+        return null;
+      }
+
       const response = await fetch(`/api/user/${userId}`);
       if (response.ok) {
         const user = await response.json();
         this.setCurrentUser(user);
         return user;
       } else {
-        // If user not found or other error, clear localStorage and return null
+        
         console.log('User not found, clearing stored session');
         this.logout();
         return null;
       }
     } catch (error) {
       console.error('Failed to load user:', error);
-      // On network error, also clear session
+      
       this.logout();
       return null;
     }
@@ -84,3 +98,4 @@ class AuthManager {
 }
 
 export const authManager = new AuthManager();
+

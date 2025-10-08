@@ -96,7 +96,7 @@ export default function Profile({ user, onUpdate }: ProfileProps) {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Profile Info */}
+          {}
           <div className="lg:col-span-2 space-y-6">
             <Card>
               <CardHeader>
@@ -160,7 +160,7 @@ export default function Profile({ user, onUpdate }: ProfileProps) {
               </CardContent>
             </Card>
 
-            {/* Notification Settings */}
+            {}
             <Card>
               <CardHeader>
                 <CardTitle>Notification Preferences</CardTitle>
@@ -197,7 +197,7 @@ export default function Profile({ user, onUpdate }: ProfileProps) {
             </Card>
           </div>
 
-          {/* Profile Stats Sidebar */}
+          {}
           <div className="space-y-6">
             <div className="bg-gradient-to-br from-eco-primary to-eco-green text-white rounded-xl p-6">
               <div className="text-center">
@@ -220,7 +220,7 @@ export default function Profile({ user, onUpdate }: ProfileProps) {
                     <span className="font-semibold text-gray-900">{user.totalWeight} kg</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">CO₂ Saved</span>
+                    <span className="text-sm text-gray-600">CO Saved</span>
                     <span className="font-semibold text-gray-900">{co2Saved.toFixed(1)} kg</span>
                   </div>
                   <div className="flex justify-between items-center">
@@ -258,3 +258,4 @@ export default function Profile({ user, onUpdate }: ProfileProps) {
     </div>
   );
 }
+

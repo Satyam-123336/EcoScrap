@@ -51,7 +51,7 @@ export default function Rewards({ user }: RewardsProps) {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-          {/* Points Balance Card */}
+          {}
           <div className="bg-gradient-to-br from-eco-primary to-eco-green text-white rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <Star className="w-8 h-8" />
@@ -61,7 +61,7 @@ export default function Rewards({ user }: RewardsProps) {
             <div className="text-sm opacity-90">EcoPoints Balance</div>
           </div>
 
-          {/* Impact Stats Card */}
+          {}
           <div className="bg-white border border-gray-200 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <Recycle className="w-8 h-8 text-eco-primary" />
@@ -71,7 +71,7 @@ export default function Rewards({ user }: RewardsProps) {
             <div className="text-sm text-gray-600">E-Waste Recycled</div>
           </div>
 
-          {/* Level Card */}
+          {}
           <div className="bg-white border border-gray-200 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <Trophy className="w-8 h-8 text-eco-amber" />
@@ -87,7 +87,7 @@ export default function Rewards({ user }: RewardsProps) {
           </div>
         </div>
 
-        {/* Recent Pickups */}
+        {}
         <Card className="mb-8">
           <CardHeader>
             <CardTitle>Recent Pickups</CardTitle>
@@ -99,24 +99,59 @@ export default function Rewards({ user }: RewardsProps) {
               </div>
             ) : (
               <div className="space-y-4">
-                {completedPickups.slice(0, 5).map((pickup: any) => {
+                {completedPickups.map((pickup: any) => {
                   const IconComponent = getEWasteIcon(pickup.eWasteType);
+                  const status = pickup.status === 'completed' ? 'Completed' : 
+                               pickup.status === 'in-progress' ? 'In Progress' : 'Scheduled';
+                  const statusColor = pickup.status === 'completed' ? 'text-green-600' :
+                                    pickup.status === 'in-progress' ? 'text-blue-600' : 'text-yellow-600';
                   return (
-                    <div key={pickup.id} className="flex items-center justify-between py-4 border-b border-gray-100 last:border-b-0">
-                      <div className="flex items-center">
+                    <div key={pickup.id} className="flex items-center justify-between py-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 rounded-lg transition-colors p-4">
+                      <div className="flex items-center flex-1">
                         <div className="w-12 h-12 bg-eco-light/20 rounded-lg flex items-center justify-center mr-4">
                           <IconComponent className="w-6 h-6 text-eco-primary" />
                         </div>
-                        <div>
-                          <div className="font-semibold text-gray-900">{pickup.eWasteType}</div>
-                          <div className="text-sm text-gray-600">
-                            {new Date(pickup.completedAt).toLocaleDateString()}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-gray-900">{pickup.eWasteType}</span>
+                            <span className={`text-sm ${statusColor} font-medium`}> {status}</span>
+                          </div>
+                          <div className="text-sm text-gray-600 mt-1">
+                            Requested: {new Date(pickup.createdAt).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                            {pickup.completedAt && (
+                              <div className="text-sm text-gray-600 mt-1">
+                                Completed: {new Date(pickup.completedAt).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </div>
+                            )}
+                            <div className="text-sm text-gray-600 mt-1">
+                              Weight: {pickup.weight}kg  Address: {pickup.address}
+                            </div>
                           </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-semibold text-eco-primary">+{pickup.pointsAwarded} points</div>
-                        <div className="text-sm text-green-600">Completed</div>
+                      <div className="text-right flex flex-col items-end">
+                        {pickup.pointsAwarded > 0 && (
+                          <div className="font-semibold text-eco-primary flex items-center gap-2">
+                            <Trophy className="w-4 h-4" />
+                            +{pickup.pointsAwarded} points
+                          </div>
+                        )}
+                        {pickup.status === 'completed' && (
+                          <div className="text-sm text-green-600 mt-1 flex items-center gap-1">
+                            <Recycle className="w-4 h-4" />
+                            CO Saved: {(parseFloat(pickup.weight) * 0.4).toFixed(1)}kg
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -126,7 +161,7 @@ export default function Rewards({ user }: RewardsProps) {
           </CardContent>
         </Card>
 
-        {/* Green Certificates */}
+        {}
         <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -168,3 +203,4 @@ export default function Rewards({ user }: RewardsProps) {
     </div>
   );
 }
+

@@ -1,10 +1,58 @@
 import express, { type Request, Response, NextFunction } from "express";
+import dotenv from "dotenv";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { pythonModelManager } from "./pythonProcess";
+
+const result = dotenv.config();
+if (result.error) {
+  console.error("Error loading .env file:", result.error);
+} else {
+  console.log("Loaded environment variables from .env:");
+  for (const key in result.parsed) {
+    if (key.toLowerCase().includes("key") || key.toLowerCase().includes("password") || key.toLowerCase().includes("secret")) {
+      console.log(`${key}: [REDACTED]`);
+    } else {
+      console.log(`${key}: ${result.parsed[key]}`);
+    }
+  }
+}
+
+const requiredEnvVars = ['DATABASE_URL'];
+const optionalEnvVars = ['GEMINI_API_KEY', 'PORT'];
+
+console.log("\n=== Environment Variables Validation ===");
+const missingRequired = requiredEnvVars.filter(varName => !process.env[varName]);
+if (missingRequired.length > 0) {
+  console.error(" Missing required environment variables:", missingRequired);
+  throw new Error(`Missing required environment variables: ${missingRequired.join(', ')}`);
+} else {
+  console.log(" All required environment variables are present");
+}
+
+optionalEnvVars.forEach(varName => {
+  if (process.env[varName]) {
+    console.log(` ${varName}: Present`);
+  } else {
+    console.log(`  ${varName}: Not set (optional)`);
+  }
+});
+
+if (process.env.GEMINI_API_KEY) {
+  console.log(` GEMINI_API_KEY: Present (length: ${process.env.GEMINI_API_KEY.length})`);
+  if (process.env.GEMINI_API_KEY.length < 10) {
+    console.warn("  GEMINI_API_KEY seems too short. Please verify it's correct.");
+  }
+} else {
+  console.log("  GEMINI_API_KEY: Not set - Chatbot will use mock responses");
+}
+console.log("=====================================\n");
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+app.use('/uploads', express.static('uploads'));
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -22,11 +70,16 @@ app.use((req, res, next) => {
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
+        if (path === "/api/chatbot") {
+          logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        } else {
+          const responseStr = JSON.stringify(capturedJsonResponse);
+          if (responseStr.length > 80) {
+            logLine += ` :: ${responseStr.slice(0, 79)}`;
+          } else {
+            logLine += ` :: ${responseStr}`;
+          }
+        }
       }
 
       log(logLine);
@@ -37,6 +90,17 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Start Python model server before starting main server
+  console.log('Starting EcoScrapPickup Backend...');
+  
+  try {
+    await pythonModelManager.startPythonModelServer();
+    console.log('Python model server is ready!');
+  } catch (error) {
+    console.warn('Python model server failed to start:', error);
+    console.warn('ML features will fall back to mock responses');
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -47,25 +111,34 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
+  const isDevelopment = process.env.NODE_ENV === "development";
+  console.log(`Environment: ${process.env.NODE_ENV}, isDevelopment: ${isDevelopment}`);
+  
+  if (isDevelopment) {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
   server.listen({
     port,
     host: "0.0.0.0",
-    reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
   });
+
+  // Graceful shutdown
+  process.on('SIGINT', async () => {
+    console.log('\nReceived SIGINT. Gracefully shutting down...');
+    await pythonModelManager.stopPythonModelServer();
+    process.exit(0);
+  });
+
+  process.on('SIGTERM', async () => {
+    console.log('\nReceived SIGTERM. Gracefully shutting down...');
+    await pythonModelManager.stopPythonModelServer();
+    process.exit(0);
+  });
 })();
+

@@ -18,33 +18,41 @@ import Profile from "@/pages/profile";
 import Admin from "@/pages/admin";
 import NotFound from "@/pages/not-found";
 import Chatbot from "@/components/chatbot/chatbot";
+import NotificationManager from "@/components/notifications/notification-manager";
 
 function Router() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  
+  const originalSetCurrentUser = authManager.setCurrentUser;
+  authManager.setCurrentUser = (user: User | null) => {
+    originalSetCurrentUser.call(authManager, user);
+    setUser(user);
+    setLoading(false);
+  };
+
+  const loadUser = async () => {
+    try {
+      const user = await Promise.race([
+        authManager.loadUser(),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)) // 5 second timeout
+      ]);
+      setUser(user);
+    } catch (error) {
+      console.error('Error loading user:', error);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    // Add timeout to prevent infinite loading
-    const loadUserWithTimeout = async () => {
-      try {
-        const user = await Promise.race([
-          authManager.loadUser(),
-          new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)) // 5 second timeout
-        ]);
-        setUser(user);
-      } catch (error) {
-        console.error('Error loading user:', error);
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
+    loadUser();
 
-    loadUserWithTimeout();
-
-    // Listen for auth changes
+    
     const handleStorageChange = () => {
-      authManager.loadUser().then(setUser);
+      loadUser();
     };
     
     window.addEventListener('storage', handleStorageChange);
@@ -66,11 +74,19 @@ function Router() {
 
   if (!user) {
     return (
-      <Switch>
-        <Route path="/register" component={Register} />
-        <Route path="/" component={Login} />
-        <Route component={Login} />
-      </Switch>
+      <div className="min-h-screen bg-gradient-to-br from-eco-primary to-eco-green">
+        <Switch>
+          <Route path="/register">
+            <Register />
+          </Route>
+          <Route path="/login">
+            <Login />
+          </Route>
+          <Route>
+            <Login />
+          </Route>
+        </Switch>
+      </div>
     );
   }
 
@@ -83,17 +99,30 @@ function Router() {
       
       <main className="min-h-screen">
         <Switch>
-          <Route path="/" component={() => <Home user={user} />} />
-          <Route path="/request-pickup" component={() => <RequestPickup user={user} />} />
-          <Route path="/rewards" component={() => <Rewards user={user} />} />
-          <Route path="/profile" component={() => <Profile user={user} onUpdate={setUser} />} />
-          <Route path="/admin" component={() => user.isAdmin ? <Admin /> : <NotFound />} />
-          <Route component={NotFound} />
+          <Route path="/">
+            {() => user.isAdmin ? <Admin /> : <Home user={user} />}
+          </Route>
+          <Route path="/request-pickup">
+            {() => user.isAdmin ? <Admin /> : <RequestPickup user={user} />}
+          </Route>
+          <Route path="/rewards">
+            {() => user.isAdmin ? <Admin /> : <Rewards user={user} />}
+          </Route>
+          <Route path="/profile">
+            {() => <Profile user={user} onUpdate={setUser} />}
+          </Route>
+          <Route path="/admin">
+            {() => user.isAdmin ? <Admin /> : <NotFound />}
+          </Route>
+          <Route>
+            <NotFound />
+          </Route>
         </Switch>
       </main>
       
       <Footer />
       <Chatbot />
+      {!user.isAdmin && null}
     </div>
   );
 }

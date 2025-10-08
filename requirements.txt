@@ -1,0 +1,13 @@
+# Python Version Requirements:
+# - Python 3.8-3.11: Use tensorflow==2.15.0
+# - Python 3.12+: Use tensorflow>=2.16.1 (experimental)
+
+flask==3.0.0
+# TensorFlow version auto-selects based on Python version
+tensorflow>=2.15.0
+pillow==10.1.0
+numpy>=1.24.0
+requests==2.31.0
+# Additional dependencies for better Python 3.13 compatibility
+protobuf>=3.19.0
+six>=1.16.0

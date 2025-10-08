@@ -9,8 +9,10 @@ import {
   Calendar,
   Trophy,
   User as UserIcon,
-  Shield
+  Shield,
+  Bell
 } from "lucide-react";
+import NotificationDropdown from "@/components/ui/notification-dropdown";
 import {
   Sheet,
   SheetContent,
@@ -25,16 +27,17 @@ interface NavigationProps {
 export default function Navigation({ user, onLogout }: NavigationProps) {
   const [location] = useLocation();
 
-  const navItems = [
-    { href: "/", label: "Home", icon: Home },
-    { href: "/request-pickup", label: "Request Pickup", icon: Calendar },
-    { href: "/rewards", label: "My Rewards", icon: Trophy },
-    { href: "/profile", label: "Profile", icon: UserIcon },
-  ];
-
-  if (user.isAdmin) {
-    navItems.push({ href: "/admin", label: "Admin", icon: Shield });
-  }
+  const navItems = user.isAdmin 
+    ? [
+        { href: "/profile", label: "Profile", icon: UserIcon },
+        { href: "/admin", label: "Admin", icon: Shield },
+      ]
+    : [
+        { href: "/", label: "Home", icon: Home },
+        { href: "/request-pickup", label: "Request Pickup", icon: Calendar },
+        { href: "/rewards", label: "My Rewards", icon: Trophy },
+        { href: "/profile", label: "Profile", icon: UserIcon },
+      ];
 
   const NavLink = ({ href, label, icon: Icon, mobile = false }: { 
     href: string; 
@@ -65,7 +68,7 @@ export default function Navigation({ user, onLogout }: NavigationProps) {
     <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Logo */}
+          {}
           <div className="flex items-center">
             <div className="flex-shrink-0 flex items-center">
               <Leaf className="text-eco-primary text-2xl mr-2" />
@@ -73,7 +76,7 @@ export default function Navigation({ user, onLogout }: NavigationProps) {
             </div>
           </div>
           
-          {/* Desktop Navigation */}
+          {}
           <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-8">
               {navItems.map((item) => (
@@ -87,7 +90,7 @@ export default function Navigation({ user, onLogout }: NavigationProps) {
             </div>
           </div>
 
-          {/* User Info & Actions */}
+          {}
           <div className="flex items-center space-x-4">
             <div className="hidden md:flex items-center space-x-2 bg-eco-light/20 px-3 py-1 rounded-full">
               <Star className="w-4 h-4 text-eco-amber" />
@@ -95,6 +98,10 @@ export default function Navigation({ user, onLogout }: NavigationProps) {
                 {user.ecoPoints.toLocaleString()} EcoPoints
               </span>
             </div>
+            
+            {!user.isAdmin && (
+              <NotificationDropdown userId={user.id} />
+            )}
             
             <Button 
               variant="outline" 
@@ -105,7 +112,7 @@ export default function Navigation({ user, onLogout }: NavigationProps) {
               Logout
             </Button>
 
-            {/* Mobile Menu */}
+            {}
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="md:hidden">
@@ -119,19 +126,24 @@ export default function Navigation({ user, onLogout }: NavigationProps) {
                     <span className="text-lg font-bold text-eco-primary">EcoScrap</span>
                   </div>
                   
-                  {/* User Info */}
+                  {}
                   <div className="bg-eco-light/10 p-4 rounded-lg mb-6">
                     <div className="font-semibold text-eco-primary">{user.name}</div>
                     <div className="text-sm text-gray-600 mb-2">{user.level}</div>
-                    <div className="flex items-center space-x-2">
-                      <Star className="w-4 h-4 text-eco-amber" />
-                      <span className="text-sm font-medium text-eco-primary">
-                        {user.ecoPoints.toLocaleString()} EcoPoints
-                      </span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Star className="w-4 h-4 text-eco-amber" />
+                        <span className="text-sm font-medium text-eco-primary">
+                          {user.ecoPoints.toLocaleString()} EcoPoints
+                        </span>
+                      </div>
+                      {!user.isAdmin && (
+                        <NotificationDropdown userId={user.id} />
+                      )}
                     </div>
                   </div>
 
-                  {/* Mobile Navigation */}
+                  {}
                   <nav className="flex-1">
                     <div className="space-y-2">
                       {navItems.map((item) => (
@@ -158,3 +170,4 @@ export default function Navigation({ user, onLogout }: NavigationProps) {
     </nav>
   );
 }
+

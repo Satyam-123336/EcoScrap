@@ -33,7 +33,7 @@ export default function Register() {
     
     try {
       await authManager.register(data);
-      // Navigation will be handled by App.tsx state change
+      
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
@@ -44,7 +44,7 @@ export default function Register() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-eco-primary to-eco-green flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo */}
+        {}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-full mb-4">
             <Leaf className="w-8 h-8 text-eco-primary" />
@@ -174,3 +174,4 @@ export default function Register() {
     </div>
   );
 }
+

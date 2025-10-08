@@ -11,6 +11,8 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   phone: text("phone").notNull(),
   address: text("address").notNull(),
+  latitude: decimal("latitude", { precision: 10, scale: 8 }),
+  longitude: decimal("longitude", { precision: 11, scale: 8 }),
   ecoPoints: integer("eco_points").notNull().default(0),
   totalWeight: decimal("total_weight", { precision: 10, scale: 2 }).notNull().default("0"),
   level: text("level").notNull().default("Eco Beginner"),
@@ -24,6 +26,8 @@ export const pickupRequests = pgTable("pickup_requests", {
   eWasteType: text("e_waste_type").notNull(),
   weight: decimal("weight", { precision: 10, scale: 2 }).notNull(),
   address: text("address").notNull(),
+  latitude: decimal("latitude", { precision: 10, scale: 8 }),
+  longitude: decimal("longitude", { precision: 11, scale: 8 }),
   photoUrl: text("photo_url"),
   status: text("status").notNull().default("scheduled"),
   aiVerification: text("ai_verification"),
@@ -40,6 +44,17 @@ export const certificates = pgTable("certificates", {
   description: text("description").notNull(),
   weight: decimal("weight", { precision: 10, scale: 2 }).notNull(),
   co2Saved: decimal("co2_saved", { precision: 10, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  type: text("type").notNull().default("info"), // info, success, warning, error
+  isRead: boolean("is_read").notNull().default(false),
+  relatedPickupId: varchar("related_pickup_id").references(() => pickupRequests.id),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -60,12 +75,19 @@ export const insertCertificateSchema = createInsertSchema(certificates).omit({
   createdAt: true,
 });
 
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertPickupRequest = z.infer<typeof insertPickupRequestSchema>;
 export type PickupRequest = typeof pickupRequests.$inferSelect;
 export type InsertCertificate = z.infer<typeof insertCertificateSchema>;
 export type Certificate = typeof certificates.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
 
 export const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -73,3 +95,4 @@ export const loginSchema = z.object({
 });
 
 export type LoginData = z.infer<typeof loginSchema>;
+

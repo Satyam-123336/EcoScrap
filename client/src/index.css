@@ -49,6 +49,9 @@
   --eco-orange: hsl(36 100% 50%);
   --eco-blue: hsl(207 90% 31%);
   --eco-error: hsl(4 90% 50%);
+  --eco-blue-light: hsl(207 90% 41%);
+  --eco-green-light: hsl(122 39% 59%);
+  --eco-amber-light: hsl(45 100% 61%);
 }
 
 .dark {
@@ -84,6 +87,18 @@
   --sidebar-accent-foreground: hsl(0 0% 98%);
   --sidebar-border: hsl(240 3.7% 15.9%);
   --sidebar-ring: hsl(142 76% 36%);
+  
+  /* Eco-friendly color palette for dark mode */
+  --eco-primary: hsl(122 39% 28%);
+  --eco-green: hsl(122 39% 59%);
+  --eco-light: hsl(122 30% 76%);
+  --eco-amber: hsl(45 100% 61%);
+  --eco-orange: hsl(36 100% 60%);
+  --eco-blue: hsl(207 90% 41%);
+  --eco-error: hsl(4 90% 60%);
+  --eco-blue-light: hsl(207 90% 51%);
+  --eco-green-light: hsl(122 39% 69%);
+  --eco-amber-light: hsl(45 100% 71%);
 }
 
 @layer base {
@@ -95,6 +110,49 @@
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  /* Chatbot specific styles */
+  .chatbot-messages {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(122 39% 49%) hsl(240 4.8% 95.9%);
+  }
+  
+  .chatbot-messages::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .chatbot-messages::-webkit-scrollbar-track {
+    background: hsl(240 4.8% 95.9%);
+    border-radius: 3px;
+  }
+  
+  .chatbot-messages::-webkit-scrollbar-thumb {
+    background: hsl(122 39% 49%);
+    border-radius: 3px;
+  }
+  
+  .chatbot-messages::-webkit-scrollbar-thumb:hover {
+    background: hsl(122 39% 36%);
+  }
+  
+  /* Message content styles */
+  .chat-message-content {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+  
+  /* Drone scene styles */
+  .drone-container {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .drone-glow {
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, transparent 70%);
   }
 }
 
@@ -141,4 +199,29 @@
   .bg-eco-error {
     background-color: var(--eco-error);
   }
+  
+  /* Custom eco-friendly utilities */
+  .bg-eco-gradient {
+    background: linear-gradient(135deg, var(--eco-primary) 0%, var(--eco-green) 100%);
+  }
+  
+  .text-eco-gradient {
+    background: linear-gradient(135deg, var(--eco-primary) 0%, var(--eco-green) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .border-eco-gradient {
+    border-image: linear-gradient(135deg, var(--eco-primary) 0%, var(--eco-green) 100%) 1;
+  }
+  
+  .shadow-eco {
+    box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.1), 0 10px 10px -5px rgba(16, 185, 129, 0.04);
+  }
+  
+  .shadow-eco-lg {
+    box-shadow: 0 20px 25px -5px rgba(16, 185, 129, 0.1), 0 10px 10px -5px rgba(16, 185, 129, 0.04);
+  }
 }
+
