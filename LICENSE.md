@@ -2,7 +2,7 @@ Copyright (c) 2026 Satyam Samanta
 
 All Rights Reserved.
 
-This software and associated documentation files (the "Software") are the proprietary property of the author.
+This software and associated documentation files (the "EcoSccrap Pickup") are the proprietary property of the author.
 
 No part of this Software may be copied, modified, distributed, sublicensed, or used in any form, in whole or in part, without prior written permission from the author.
 
