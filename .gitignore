@@ -5,3 +5,9 @@ server/public
 vite.config.ts.*
 *.tar.gz
 .local/
+uploads/
+.env*
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+*.log

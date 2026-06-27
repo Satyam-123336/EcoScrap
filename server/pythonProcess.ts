@@ -24,11 +24,11 @@ class PythonModelManager {
       await this.checkPythonAvailability();
 
       // Start the Python model server
-      const modelServerPath = path.join(process.cwd(), 'model_server.py');
+      const modelServerPath = path.join(process.cwd(), 'ai_model', 'model_server.py');
       
       this.pythonProcess = spawn('python', [modelServerPath], {
         stdio: ['pipe', 'pipe', 'pipe'],
-        cwd: process.cwd()
+        cwd: path.join(process.cwd(), 'ai_model')
       });
 
       // Handle Python process output

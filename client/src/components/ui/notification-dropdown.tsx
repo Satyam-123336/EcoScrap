@@ -103,10 +103,8 @@ const getNotificationBg = (type: string, message: string, isRead: boolean) => {
 
 
 const formatMessagePreview = (message: string) => {
-  
-  let preview = message.substring(0, 60);
-  if (message.length > 60) preview += '...';
-  
+  // Fix: Do not truncate the message anymore so users can view it properly.
+  let preview = message;
   
   const coordMatch = preview.match(/([0-9]+\.[0-9]+),\s*([0-9]+\.[0-9]+)/);
   if (coordMatch) {
@@ -135,6 +133,15 @@ export default function NotificationDropdown({ userId }: NotificationDropdownPro
       refetch(); 
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
+    }
+  };
+
+  const handleDelete = async (notificationId: string) => {
+    try {
+      await apiRequest('DELETE', `/api/notifications/${notificationId}`, {});
+      refetch();
+    } catch (error) {
+      console.error('Failed to delete notification:', error);
     }
   };
 
@@ -277,8 +284,9 @@ export default function NotificationDropdown({ userId }: NotificationDropdownPro
                                     <Button
                                       size="sm"
                                       variant="ghost"
-                                      onClick={() => handleMarkAsRead(notification.id)}
-                                      className="text-xs h-6 w-6 p-0"
+                                      onClick={() => handleDelete(notification.id)}
+                                      className="text-xs h-6 w-6 p-0 hover:bg-red-100 hover:text-red-600"
+                                      title="Remove notification"
                                     >
                                       <X className="w-3 h-3" />
                                     </Button>

@@ -1,5 +1,18 @@
-import { type User, type InsertUser, type PickupRequest, type InsertPickupRequest, type Certificate, type InsertCertificate, type Notification, type InsertNotification } from "@shared/schema";
-import { randomUUID } from "crypto";
+import {
+  type User,
+  type InsertUser,
+  type PickupRequest,
+  type InsertPickupRequest,
+  type Certificate,
+  type InsertCertificate,
+  type Notification,
+  type InsertNotification,
+} from "@shared/schema";
+import { users, pickupRequests, certificates, notifications } from "@shared/schema";
+import { db } from "./db";
+import { eq, desc, and } from "drizzle-orm";
+
+// ─── Interface ────────────────────────────────────────────────────────────────
 
 export interface IStorage {
   // User operations
@@ -8,18 +21,18 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
-  
+
   // Pickup request operations
   getPickupRequest(id: string): Promise<PickupRequest | undefined>;
   getPickupRequestsByUser(userId: string): Promise<PickupRequest[]>;
   getAllPickupRequests(): Promise<PickupRequest[]>;
   createPickupRequest(request: InsertPickupRequest): Promise<PickupRequest>;
   updatePickupRequest(id: string, updates: Partial<PickupRequest>): Promise<PickupRequest | undefined>;
-  
+
   // Certificate operations
   getCertificatesByUser(userId: string): Promise<Certificate[]>;
   createCertificate(certificate: InsertCertificate): Promise<Certificate>;
-  
+
   // Notification operations
   getNotificationsByUser(userId: string): Promise<Notification[]>;
   createNotification(notification: InsertNotification): Promise<Notification>;
@@ -27,212 +40,134 @@ export interface IStorage {
   getUnreadNotificationsByUser(userId: string): Promise<Notification[]>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-  private pickupRequests: Map<string, PickupRequest>;
-  private certificates: Map<string, Certificate>;
-  private notifications: Map<string, Notification>;
+// ─── PostgreSQL Storage (primary) ─────────────────────────────────────────────
 
-  constructor() {
-    this.users = new Map();
-    this.pickupRequests = new Map();
-    this.certificates = new Map();
-    this.notifications = new Map();
-    
-    // Create default admin user
-    this.createDefaultAdmin();
-    
-    // Create a test user and pickup request for testing notifications
-    setTimeout(() => {
-      this.createTestData();
-    }, 100);
-  }
+export class DbStorage implements IStorage {
 
-  private async createDefaultAdmin() {
-    const bcrypt = await import('bcryptjs');
-    const adminId = randomUUID();
-    const hashedPassword = await bcrypt.hash("admin123", 10);
-    const admin: User = {
-      id: adminId,
-      username: "admin",
-      email: "admin@ecoscrap.com",
-      password: hashedPassword,
-      name: "System Administrator",
-      phone: "+1 (555) 000-0000",
-      address: "EcoScrap HQ, San Francisco, CA",
-      latitude: null,
-      longitude: null,
-      ecoPoints: 0,
-      totalWeight: "0",
-      level: "Admin",
-      isAdmin: true,
-      createdAt: new Date(),
-    };
-    this.users.set(adminId, admin);
-  }
-
-  private async createTestData() {
-    // Create a test user
-    const bcrypt = await import('bcryptjs');
-    const testUserId = randomUUID();
-    const hashedPassword = await bcrypt.hash("test123", 10);
-    const testUser: User = {
-      id: testUserId,
-      username: "testuser",
-      email: "test@example.com",
-      password: hashedPassword,
-      name: "Test User",
-      phone: "+1 (555) 123-4567",
-      address: "123 Test Street, Test City, CA 90210",
-      latitude: null,
-      longitude: null,
-      ecoPoints: 0,
-      totalWeight: "0",
-      level: "Eco Beginner",
-      isAdmin: false,
-      createdAt: new Date(),
-    };
-    this.users.set(testUserId, testUser);
-    
-    console.log("Created test data:");
-    console.log("- Test user ID:", testUserId);
-  }
-
-
+  // ── Users ──────────────────────────────────────────────────────────────────
 
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    const result = await db.select().from(users).where(eq(users.id, id));
+    return result[0];
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.username === username);
+    const result = await db.select().from(users).where(eq(users.username, username));
+    return result[0];
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.email === email);
+    const result = await db.select().from(users).where(eq(users.email, email));
+    return result[0];
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = {
-      ...insertUser,
-      id,
-      latitude: insertUser.latitude || null,
-      longitude: insertUser.longitude || null,
-      ecoPoints: 0,
-      totalWeight: "0",
-      level: "Eco Beginner",
-      isAdmin: false,
-      createdAt: new Date(),
-    };
-    this.users.set(id, user);
-    return user;
+  async createUser(user: InsertUser): Promise<User> {
+    const result = await db.insert(users).values(user).returning();
+    return result[0];
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
-    const user = this.users.get(id);
-    if (!user) return undefined;
-    
-    const updatedUser = { ...user, ...updates };
-    this.users.set(id, updatedUser);
-    return updatedUser;
+    // Strip non-updatable fields before writing
+    const { id: _id, createdAt: _createdAt, ...safeUpdates } = updates as any;
+    const result = await db
+      .update(users)
+      .set(safeUpdates)
+      .where(eq(users.id, id))
+      .returning();
+    return result[0];
   }
 
+  // ── Pickup Requests ────────────────────────────────────────────────────────
+
   async getPickupRequest(id: string): Promise<PickupRequest | undefined> {
-    return this.pickupRequests.get(id);
+    const result = await db.select().from(pickupRequests).where(eq(pickupRequests.id, id));
+    return result[0];
   }
 
   async getPickupRequestsByUser(userId: string): Promise<PickupRequest[]> {
-    return Array.from(this.pickupRequests.values())
-      .filter(request => request.userId === userId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return db
+      .select()
+      .from(pickupRequests)
+      .where(eq(pickupRequests.userId, userId))
+      .orderBy(desc(pickupRequests.createdAt));
   }
 
   async getAllPickupRequests(): Promise<PickupRequest[]> {
-    return Array.from(this.pickupRequests.values())
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return db.select().from(pickupRequests).orderBy(desc(pickupRequests.createdAt));
   }
 
-  async createPickupRequest(insertRequest: InsertPickupRequest): Promise<PickupRequest> {
-    const id = `ECO-${new Date().getFullYear()}-${Math.floor(Math.random() * 900000 + 100000)}`;
-    const request: PickupRequest = {
-      ...insertRequest,
-      id,
-      latitude: insertRequest.latitude || null,
-      longitude: insertRequest.longitude || null,
-      status: "scheduled",
-      pointsAwarded: 0,
-      createdAt: new Date(),
-      completedAt: null,
-      photoUrl: insertRequest.photoUrl || null,
-      aiVerification: insertRequest.aiVerification || null,
-    };
-    this.pickupRequests.set(id, request);
-    return request;
+  async createPickupRequest(request: InsertPickupRequest): Promise<PickupRequest> {
+    // DB generates a UUID via gen_random_uuid() — no manual ID needed (fixes BUG-22)
+    const result = await db.insert(pickupRequests).values(request).returning();
+    return result[0];
   }
 
   async updatePickupRequest(id: string, updates: Partial<PickupRequest>): Promise<PickupRequest | undefined> {
-    const request = this.pickupRequests.get(id);
-    if (!request) return undefined;
-    
-    const updatedRequest = { ...request, ...updates };
-    this.pickupRequests.set(id, updatedRequest);
-    return updatedRequest;
+    const { id: _id, createdAt: _createdAt, ...safeUpdates } = updates as any;
+    const result = await db
+      .update(pickupRequests)
+      .set(safeUpdates)
+      .where(eq(pickupRequests.id, id))
+      .returning();
+    return result[0];
   }
+
+  // ── Certificates ───────────────────────────────────────────────────────────
 
   async getCertificatesByUser(userId: string): Promise<Certificate[]> {
-    return Array.from(this.certificates.values())
-      .filter(cert => cert.userId === userId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return db
+      .select()
+      .from(certificates)
+      .where(eq(certificates.userId, userId))
+      .orderBy(desc(certificates.createdAt));
   }
 
-  async createCertificate(insertCertificate: InsertCertificate): Promise<Certificate> {
-    const id = randomUUID();
-    const certificate: Certificate = {
-      ...insertCertificate,
-      id,
-      createdAt: new Date(),
-    };
-    this.certificates.set(id, certificate);
-    return certificate;
+  async createCertificate(certificate: InsertCertificate): Promise<Certificate> {
+    const result = await db.insert(certificates).values(certificate).returning();
+    return result[0];
   }
 
-  // Notification operations
+  // ── Notifications ──────────────────────────────────────────────────────────
+
   async getNotificationsByUser(userId: string): Promise<Notification[]> {
-    return Array.from(this.notifications.values())
-      .filter(notification => notification.userId === userId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt));
   }
 
-  async createNotification(insertNotification: InsertNotification): Promise<Notification> {
-    const id = randomUUID();
-    const notification: Notification = {
-      ...insertNotification,
-      id,
-      type: insertNotification.type || "info",
-      isRead: insertNotification.isRead || false,
-      relatedPickupId: insertNotification.relatedPickupId || null,
-      createdAt: new Date(),
-    };
-    this.notifications.set(id, notification);
-    return notification;
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const result = await db.insert(notifications).values(notification).returning();
+    return result[0];
   }
 
   async markNotificationAsRead(id: string): Promise<Notification | undefined> {
-    const notification = this.notifications.get(id);
-    if (!notification) return undefined;
-    
-    const updatedNotification = { ...notification, isRead: true };
-    this.notifications.set(id, updatedNotification);
-    return updatedNotification;
+    const result = await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(eq(notifications.id, id))
+      .returning();
+    return result[0];
   }
 
   async getUnreadNotificationsByUser(userId: string): Promise<Notification[]> {
-    return Array.from(this.notifications.values())
-      .filter(notification => notification.userId === userId && !notification.isRead)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return db
+      .select()
+      .from(notifications)
+      .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)))
+      .orderBy(desc(notifications.createdAt));
+  }
+
+  async deleteNotification(id: string): Promise<boolean> {
+    const result = await db
+      .delete(notifications)
+      .where(eq(notifications.id, id))
+      .returning();
+    return result.length > 0;
   }
 }
 
-export const storage = new MemStorage();
-
+// ─── Singleton export ─────────────────────────────────────────────────────────
+// BUG-01 FIX: Use real PostgreSQL storage instead of in-memory MemStorage.
+export const storage = new DbStorage();

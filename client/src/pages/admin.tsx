@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,50 @@ export default function Admin() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // BUG-14 fix: filter state for the pickup table
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const filterOptions = ["all", "scheduled", "in-progress", "completed"];
+
+  const cycleFilter = () => {
+    setFilterStatus(prev => {
+      const idx = filterOptions.indexOf(prev);
+      return filterOptions[(idx + 1) % filterOptions.length];
+    });
+  };
+
+  // BUG-14 fix: export visible requests as CSV
+  const exportCSV = () => {
+    const rows = filteredRequests as any[];
+    if (!rows || rows.length === 0) {
+      toast({ title: "Nothing to export", description: "No pickup requests match the current filter.", variant: "destructive" });
+      return;
+    }
+    const headers = ["ID", "User ID", "Address", "Weight (kg)", "Status", "Pickup Date", "Time Slot", "Created At"];
+    const csvRows = [
+      headers.join(","),
+      ...rows.map((r: any) =>
+        [
+          r.id, 
+          r.userId, 
+          `"${r.address}"`, 
+          r.weight, 
+          r.status,
+          r.pickupDate ? new Date(r.pickupDate).toLocaleDateString() : "",
+          r.pickupTimeSlot || "Not Specified",
+          new Date(r.createdAt).toLocaleDateString()
+        ].join(",")
+      ),
+    ];
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `pickup-requests-${filterStatus}-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "Exported!", description: `${rows.length} record(s) downloaded as CSV.` });
+  };
+
   const { data: stats } = useQuery({
     queryKey: ['/api/stats'],
     refetchInterval: 1000, // Refresh every 1 second for instant stats updates
@@ -56,6 +101,11 @@ export default function Admin() {
     queryKey: ['/api/pickup-requests'],
     refetchInterval: 500, // Refresh every 500ms for near-instant updates
   });
+
+  // BUG-14 fix: filtered view of requests
+  const filteredRequests = filterStatus === "all"
+    ? (pickupRequests as any[])
+    : ((pickupRequests as any[]) || []).filter((r: any) => r.status === filterStatus);
 
   // Simulation status query
   const { data: simulationStatus } = useQuery<SimulationStatusResponse>({
@@ -347,22 +397,29 @@ export default function Admin() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Recent Pickup Requests</CardTitle>
+              <div className="flex items-center gap-3">
+                <CardTitle>Recent Pickup Requests</CardTitle>
+                {filterStatus !== "all" && (
+                  <span className="text-xs px-2 py-1 rounded-full bg-eco-primary/10 text-eco-primary font-medium capitalize">
+                    {filterStatus}
+                  </span>
+                )}
+              </div>
               <div className="flex space-x-2">
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={cycleFilter} title={`Filter: ${filterStatus} → click to cycle`}>
                   <Filter className="w-4 h-4 mr-1" />
-                  Filter
+                  {filterStatus === "all" ? "Filter" : filterStatus.charAt(0).toUpperCase() + filterStatus.slice(1)}
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={exportCSV}>
                   <Download className="w-4 h-4 mr-1" />
-                  Export
+                  Export CSV
                 </Button>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <PickupTable
-              requests={(pickupRequests as any) || []}
+              requests={filteredRequests || []}
               onComplete={handlePickupAction}
               isLoading={acceptPickupMutation.isPending || completePickupMutation.isPending}
             />

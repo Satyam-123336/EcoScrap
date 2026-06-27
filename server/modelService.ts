@@ -130,8 +130,9 @@ function getMockAnalysis(): Promise<{
   
   const confidence = 0.6 + Math.random() * 0.35;
 
-  
-  const recyclable = !['Battery', 'PCB'].includes(classification);
+  // BUG-13 fix: All e-waste categories are recyclable — matches real Python model server behaviour.
+  // Battery/PCB require specialist handling but are NOT non-recyclable.
+  const recyclable = true;
 
   
   const estimatedWeight = getEstimatedWeight(classification);

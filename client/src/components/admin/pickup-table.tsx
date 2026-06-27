@@ -72,6 +72,7 @@ export default function PickupTable({ requests, onComplete, isLoading }: PickupT
                     <div>
                       <div className="text-sm font-medium text-gray-900">User ID: {request.userId}</div>
                       <div className="text-sm text-gray-500">{request.address}</div>
+                      <div className="text-xs text-eco-primary mt-1 font-semibold">{request.pickupTimeSlot || "Not Specified"}</div>
                     </div>
                   </TableCell>
                   <TableCell>{request.eWasteType}</TableCell>
@@ -202,6 +203,9 @@ export default function PickupTable({ requests, onComplete, isLoading }: PickupT
                                           month: 'long',
                                           day: 'numeric'
                                         })}
+                                      </div>
+                                      <div className="text-sm font-semibold text-eco-primary mt-1">
+                                        {selectedRequest.pickupTimeSlot || "Not Specified"}
                                       </div>
                                     </div>
                                     <div>

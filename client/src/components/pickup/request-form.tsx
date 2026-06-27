@@ -37,6 +37,7 @@ const formSchema = z.object({
   eWasteTypes: z.array(z.string()).min(1, "Please select at least one e-waste type"),
   weight: z.string().min(1, "Weight is required").refine((val) => !isNaN(Number(val)) && Number(val) > 0, "Weight must be a positive number"),
   pickupDate: z.string().min(1, "Pickup date is required"),
+  pickupTimeSlot: z.string().min(1, "Time slot is required"),
   address: z.string().min(1, "Address is required"),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
@@ -70,6 +71,7 @@ export default function RequestForm({ user }: RequestFormProps) {
       eWasteTypes: [],
       weight: "",
       pickupDate: "",
+      pickupTimeSlot: "",
       address: user.address || "",
       latitude: user.latitude ? Number(user.latitude) : undefined,
       longitude: user.longitude ? Number(user.longitude) : undefined,
@@ -79,7 +81,7 @@ export default function RequestForm({ user }: RequestFormProps) {
   const createPickupMutation = useMutation({
     mutationFn: async (data: FormData & { photos?: File[] }) => {
       const formData = new FormData();
-      formData.append('userId', user.id);
+      // BUG-05 fix: userId is taken from the server session — do NOT send in body
       
       // Add e-waste types as indexed form fields
       data.eWasteTypes.forEach((type, index) => {
@@ -88,6 +90,7 @@ export default function RequestForm({ user }: RequestFormProps) {
       
       formData.append('weight', data.weight);
       formData.append('pickupDate', data.pickupDate);
+      formData.append('pickupTimeSlot', data.pickupTimeSlot);
       formData.append('address', data.address);
       formData.append('latitude', data.latitude?.toString() || '');
       formData.append('longitude', data.longitude?.toString() || '');
@@ -429,20 +432,36 @@ export default function RequestForm({ user }: RequestFormProps) {
     setAiVerification(verification);
   };
 
-  const schedulePickup = () => {
+  const schedulePickup = async () => {
     const formData = form.getValues();
-    
-    if (formData.latitude === undefined || formData.longitude === undefined) {
-      toast({
-        title: "Location Required",
-        description: "Please use the 'Get Current Location' button to set your pickup location",
-        variant: "destructive",
-      });
-      return;
+
+    // Fix 4: If no GPS coordinates but user has typed an address,
+    // attempt forward geocoding via Nominatim before submitting.
+    if ((formData.latitude === undefined || formData.longitude === undefined) && formData.address?.trim()) {
+      try {
+        const geoResponse = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(formData.address)}&limit=1`,
+          { headers: { 'Accept-Language': 'en-US,en', 'User-Agent': 'EcoScrapPickup/1.0' } }
+        );
+        if (geoResponse.ok) {
+          const results = await geoResponse.json();
+          if (results.length > 0) {
+            form.setValue('latitude', parseFloat(results[0].lat));
+            form.setValue('longitude', parseFloat(results[0].lon));
+            toast({
+              title: "Address Located",
+              description: "We found your address on the map. Proceeding with pickup scheduling.",
+            });
+          }
+        }
+      } catch {
+        // Geocoding failed — submit anyway with just the text address
+        console.log('Forward geocoding failed; submitting with text address only.');
+      }
     }
-    
+
     createPickupMutation.mutate({
-      ...formData,
+      ...form.getValues(),   // use updated values (may now include geocoded lat/lng)
       photos: uploadedPhotos
     });
   };
@@ -481,7 +500,7 @@ export default function RequestForm({ user }: RequestFormProps) {
               <Label className="block text-sm font-semibold text-gray-700 mb-3">
                 Type of E-Waste
               </Label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                 {eWasteTypes.map(({ id, label, icon: Icon }) => (
                   <button
                     key={id}
@@ -517,7 +536,7 @@ export default function RequestForm({ user }: RequestFormProps) {
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-6">
               <div>
                 <Label htmlFor="weight">Approximate Weight (kg)</Label>
                 <Input
@@ -535,20 +554,40 @@ export default function RequestForm({ user }: RequestFormProps) {
                   </p>
                 )}
               </div>
-              <div>
-                <Label htmlFor="pickupDate">Pickup Date</Label>
-                <Input
-                  id="pickupDate"
-                  type="date"
-                  {...form.register("pickupDate")}
-                  className="mt-1"
-                  min={new Date().toISOString().split('T')[0]}
-                />
-                {form.formState.errors.pickupDate?.message && (
-                  <p className="text-sm text-red-500 mt-1">
-                    {form.formState.errors.pickupDate.message}
-                  </p>
-                )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="pickupDate">Pickup Date</Label>
+                  <Input
+                    id="pickupDate"
+                    type="date"
+                    {...form.register("pickupDate")}
+                    className="mt-1"
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                  {form.formState.errors.pickupDate?.message && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {form.formState.errors.pickupDate.message}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="pickupTimeSlot">Time Slot</Label>
+                  <select
+                    id="pickupTimeSlot"
+                    {...form.register("pickupTimeSlot")}
+                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-1"
+                  >
+                    <option value="" disabled>Select time slot</option>
+                    <option value="Morning (9 AM - 12 PM)">Morning (9 AM - 12 PM)</option>
+                    <option value="Afternoon (12 PM - 3 PM)">Afternoon (12 PM - 3 PM)</option>
+                    <option value="Evening (3 PM - 6 PM)">Evening (3 PM - 6 PM)</option>
+                  </select>
+                  {form.formState.errors.pickupTimeSlot?.message && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {form.formState.errors.pickupTimeSlot.message}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -621,8 +660,7 @@ export default function RequestForm({ user }: RequestFormProps) {
                   </div>
                 ) : (
                   <p className="text-xs text-gray-500">
-                    <span className="mr-1"></span>
-                    Click "Get Location" for precise pickup coordinates
+                    Type your address above, or click "Get Location" for automatic GPS detection
                   </p>
                 )}
               </div>
@@ -727,8 +765,9 @@ export default function RequestForm({ user }: RequestFormProps) {
                   <div className="text-lg font-semibold text-eco-amber">Scheduled</div>
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-gray-700">Estimated Pickup</div>
+                  <div className="text-sm font-medium text-gray-500">Pickup Details</div>
                   <div className="text-lg">{form.getValues().pickupDate}</div>
+                  <div className="text-md text-gray-600">{form.getValues().pickupTimeSlot}</div>
                 </div>
                 <div>
                   <div className="text-sm font-semibold text-gray-700">Potential EcoPoints</div>

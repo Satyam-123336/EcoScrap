@@ -34,6 +34,7 @@ export const pickupRequests = pgTable("pickup_requests", {
   pickupDate: timestamp("pickup_date").notNull(),
   completedAt: timestamp("completed_at"),
   pointsAwarded: integer("points_awarded").default(0),
+  pickupTimeSlot: text("pickup_time_slot").notNull().default("Not Specified"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

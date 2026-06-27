@@ -1,3 +1,4 @@
+import 'dotenv/config';  // must be first — db.ts is imported before index.ts calls dotenv.config()
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from '../shared/schema';
