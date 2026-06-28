@@ -1,6 +1,5 @@
 # 🌿 EcoScrap Pickup — AI & Autonomous Drone E-Waste Recycling Platform
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-18.0-61dafb.svg)](https://reactjs.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38bdf8.svg)](https://tailwindcss.com/)
@@ -111,4 +110,4 @@ Visit the **[About Us / Meet the Creators](/creators)** section within the live 
 
 ## 📄 License & Legal
 
-This project is licensed under the MIT License. See the **Terms of Service**, **Privacy Policy**, and **Cookie Policy** pages within the application for compliance and data handling disclosures.
+This project is licensed under a License. See the **Terms of Service**, **Privacy Policy**, and **Cookie Policy** pages within the application for compliance and data handling disclosures.
