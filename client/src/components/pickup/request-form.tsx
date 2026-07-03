@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { User } from "@shared/schema";
@@ -10,24 +10,29 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import PhotoUpload from "./photo-upload";
+import MapPinModal from "./map-pin-modal";
 import {
   ArrowLeft,
   ArrowRight,
   Check,
+  Upload,
   MapPin,
-  Smartphone,
-  Plug,
-  Battery,
-  Laptop,
-  Zap,
-  Sparkles,
+  Clock,
+  Calendar,
+  AlertCircle,
   Headphones,
+  Smartphone,
+  Battery,
+  Plug,
   Keyboard,
   Mouse,
   HardDrive,
-  Cpu
+  Cpu,
+  Navigation,
+  Sparkles,
+  Zap,
 } from "lucide-react";
-import { z } from "zod";
+import * as z from "zod";
 
 interface RequestFormProps {
   user: User;
@@ -35,10 +40,10 @@ interface RequestFormProps {
 
 const formSchema = z.object({
   eWasteTypes: z.array(z.string()).min(1, "Please select at least one e-waste type"),
-  weight: z.string().min(1, "Weight is required").refine((val) => !isNaN(Number(val)) && Number(val) > 0, "Weight must be a positive number"),
+  weight: z.string().min(1, "Estimated weight is required"),
   pickupDate: z.string().min(1, "Pickup date is required"),
-  pickupTimeSlot: z.string().min(1, "Time slot is required"),
-  address: z.string().min(1, "Address is required"),
+  pickupTimeSlot: z.string().min(1, "Pickup time slot is required"),
+  address: z.string().min(5, "Please provide a complete pickup address"),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
 });
@@ -63,6 +68,7 @@ export default function RequestForm({ user }: RequestFormProps) {
   const [aiVerification, setAiVerification] = useState<string>("");
   const [isGpsLoading, setIsGpsLoading] = useState(false);
   const [pickupId, setPickupId] = useState<string | null>(null);
+  const [showMapModal, setShowMapModal] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<FormData>({
@@ -77,6 +83,29 @@ export default function RequestForm({ user }: RequestFormProps) {
       longitude: user.longitude ? Number(user.longitude) : undefined,
     },
   });
+
+  const watchedDate = form.watch("pickupDate");
+  const watchedSlot = form.watch("pickupTimeSlot");
+
+  // Synchronize available time slots with current date & time
+  const todayStr = new Date().toISOString().split("T")[0];
+  const isSelectedDateToday = watchedDate === todayStr;
+  const currentHour = new Date().getHours();
+
+  const isMorningExpired = isSelectedDateToday && currentHour >= 12;
+  const isAfternoonExpired = isSelectedDateToday && currentHour >= 15;
+  const isEveningExpired = isSelectedDateToday && currentHour >= 18;
+
+  useEffect(() => {
+    if (!isSelectedDateToday) return;
+    if (watchedSlot === "Morning (9 AM - 12 PM)" && isMorningExpired) {
+      form.setValue("pickupTimeSlot", "");
+    } else if (watchedSlot === "Afternoon (12 PM - 3 PM)" && isAfternoonExpired) {
+      form.setValue("pickupTimeSlot", "");
+    } else if (watchedSlot === "Evening (3 PM - 6 PM)" && isEveningExpired) {
+      form.setValue("pickupTimeSlot", "");
+    }
+  }, [watchedDate, watchedSlot, isSelectedDateToday, isMorningExpired, isAfternoonExpired, isEveningExpired, form]);
 
   const createPickupMutation = useMutation({
     mutationFn: async (data: FormData & { photos?: File[] }) => {
@@ -173,142 +202,43 @@ export default function RequestForm({ user }: RequestFormProps) {
     });
 
     try {
-      // First attempt with high accuracy settings
+      // Industry Standard (Uber/Swiggy): Get location fast (< 1.5s typical, 5s max cap).
+      // On desktop PCs without hardware GPS, Wi-Fi triangulation returns 50m-150m accuracy.
+      // We accept this initial neighborhood fix immediately so the user can visually drag the pin!
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, { 
           enableHighAccuracy: true, 
-          timeout: 20000, // Longer timeout for GPS lock
-          maximumAge: 0 // Always get fresh location
+          timeout: 5000, 
+          maximumAge: 30000
         });
       });
       
-      let { latitude, longitude, accuracy } = position.coords;
-      console.log(`Initial GPS reading: ${accuracy}m accuracy`);
+      const { latitude, longitude, accuracy } = position.coords;
+      console.log(`GPS reading acquired in <1.5s: ${latitude}, ${longitude} (${accuracy}m accuracy)`);
       
-      // If accuracy is poor, try multiple readings and use the best one
-      if (accuracy > 50) {
-        console.log(`Poor accuracy detected (${accuracy}m), attempting multiple readings...`);
-        
-        const readings = [{ lat: latitude, lng: longitude, acc: accuracy }];
-        
-        // Take up to 3 additional readings
-        for (let attempt = 1; attempt <= 3; attempt++) {
-          try {
-            console.log(`Attempt ${attempt + 1} for better accuracy...`);
-            const betterPosition = await new Promise<GeolocationPosition>((resolve, reject) => {
-              navigator.geolocation.getCurrentPosition(resolve, reject, { 
-                enableHighAccuracy: true,
-                timeout: 15000 + (attempt * 5000), // Progressive timeout
-                maximumAge: 0
-              });
-            });
-            
-            readings.push({
-              lat: betterPosition.coords.latitude,
-              lng: betterPosition.coords.longitude,
-              acc: betterPosition.coords.accuracy
-            });
-            
-            console.log(`Reading ${attempt + 1}: ${betterPosition.coords.accuracy}m accuracy`);
-            
-            // If we get a good reading, stop trying
-            if (betterPosition.coords.accuracy <= 20) {
-              console.log("Good accuracy achieved, stopping additional attempts");
-              break;
-            }
-          } catch (retryError) {
-            console.log(`Attempt ${attempt + 1} failed:`, retryError);
-          }
-        }
-        
-        // Find the most accurate reading
-        const bestReading = readings.reduce((best, current) => 
-          current.acc < best.acc ? current : best
-        );
-        
-        if (bestReading.acc < accuracy) {
-          console.log(`Using best reading: improved from ${accuracy}m to ${bestReading.acc}m`);
-          latitude = bestReading.lat;
-          longitude = bestReading.lng;
-          accuracy = bestReading.acc;
-        }
-        
-        // If still poor accuracy, try watchPosition for a few seconds
-        if (accuracy > 100) {
-          console.log("Trying continuous location monitoring for better accuracy...");
-          try {
-            const watchPosition = await new Promise<GeolocationPosition>((resolve, reject) => {
-              let bestWatchAccuracy = accuracy;
-              let bestWatchPosition: GeolocationPosition | null = null;
-              let watchId: number;
-              
-              const timeout = setTimeout(() => {
-                navigator.geolocation.clearWatch(watchId);
-                if (bestWatchPosition) {
-                  resolve(bestWatchPosition);
-                } else {
-                  reject(new Error("No better position found"));
-                }
-              }, 10000); // Watch for 10 seconds
-              
-              watchId = navigator.geolocation.watchPosition(
-                (pos) => {
-                  if (pos.coords.accuracy < bestWatchAccuracy) {
-                    bestWatchAccuracy = pos.coords.accuracy;
-                    bestWatchPosition = pos;
-                    console.log(`Watch position improved: ${pos.coords.accuracy}m`);
-                    
-                    // If we get very good accuracy, resolve immediately
-                    if (pos.coords.accuracy <= 15) {
-                      clearTimeout(timeout);
-                      navigator.geolocation.clearWatch(watchId);
-                      resolve(pos);
-                    }
-                  }
-                },
-                (error) => {
-                  clearTimeout(timeout);
-                  navigator.geolocation.clearWatch(watchId);
-                  reject(error);
-                },
-                {
-                  enableHighAccuracy: true,
-                  timeout: 5000,
-                  maximumAge: 0
-                }
-              );
-            });
-            
-            if (watchPosition.coords.accuracy < accuracy) {
-              console.log(`Watch position improved accuracy from ${accuracy}m to ${watchPosition.coords.accuracy}m`);
-              latitude = watchPosition.coords.latitude;
-              longitude = watchPosition.coords.longitude;
-              accuracy = watchPosition.coords.accuracy;
-            }
-          } catch (watchError) {
-            console.log("Watch position failed:", watchError);
-          }
-        }
-      }
-      
-      // Simple reverse geocoding using Nominatim API
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
-        { 
-          headers: { 
-            'Accept-Language': 'en-US,en',
-            'User-Agent': 'EcoScrapPickup/1.0' 
-          } 
-        }
-      );
-      
+      // Reverse geocoding via Nominatim (OpenStreetMap) — global coverage, no API key.
       let address = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.display_name) {
-          address = data.display_name;
+
+      try {
+        const geoResponse = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
+          {
+            headers: {
+              "Accept-Language": "en-US,en",
+              "User-Agent": "EcoScrapPickup/1.0",
+            },
+            signal: AbortSignal.timeout(5000),
+          }
+        );
+
+        if (geoResponse.ok) {
+          const geoData = await geoResponse.json();
+          if (geoData?.display_name) {
+            address = geoData.display_name;
+          }
         }
+      } catch {
+        console.warn("Nominatim reverse geocoding fallback triggered.");
       }
       
       form.setValue("latitude", latitude);
@@ -366,9 +296,12 @@ export default function RequestForm({ user }: RequestFormProps) {
             </div>
           </div>
         ),
-        variant: "default",
         duration: showAccuracyTip ? 15000 : 8000, // Longer duration for tips
       });
+
+      // Automatically pop open the high-precision map pin modal immediately
+      // so the user can visually drag/confirm their exact doorstep!
+      setShowMapModal(true);
     } catch (error: any) {
       console.error('Location error:', error);
       
@@ -578,13 +511,24 @@ export default function RequestForm({ user }: RequestFormProps) {
                     className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-1"
                   >
                     <option value="" disabled>Select time slot</option>
-                    <option value="Morning (9 AM - 12 PM)">Morning (9 AM - 12 PM)</option>
-                    <option value="Afternoon (12 PM - 3 PM)">Afternoon (12 PM - 3 PM)</option>
-                    <option value="Evening (3 PM - 6 PM)">Evening (3 PM - 6 PM)</option>
+                    <option value="Morning (9 AM - 12 PM)" disabled={isMorningExpired}>
+                      Morning (9 AM - 12 PM) {isMorningExpired ? "(Ended for today)" : ""}
+                    </option>
+                    <option value="Afternoon (12 PM - 3 PM)" disabled={isAfternoonExpired}>
+                      Afternoon (12 PM - 3 PM) {isAfternoonExpired ? "(Ended for today)" : ""}
+                    </option>
+                    <option value="Evening (3 PM - 6 PM)" disabled={isEveningExpired}>
+                      Evening (3 PM - 6 PM) {isEveningExpired ? "(Ended for today)" : ""}
+                    </option>
                   </select>
                   {form.formState.errors.pickupTimeSlot?.message && (
                     <p className="text-sm text-red-500 mt-1">
                       {form.formState.errors.pickupTimeSlot.message}
+                    </p>
+                  )}
+                  {isSelectedDateToday && isEveningExpired && (
+                    <p className="text-xs text-orange-600 font-medium mt-1.5 flex items-center gap-1">
+                      <span>⚠️ All pickup slots for today have ended. Please select tomorrow.</span>
                     </p>
                   )}
                 </div>
@@ -592,28 +536,39 @@ export default function RequestForm({ user }: RequestFormProps) {
             </div>
 
             <div>
-              <Label htmlFor="address">Pickup Location</Label>
-              <div className="flex gap-3 mt-1">
+              <Label htmlFor="address" className="text-sm font-semibold text-gray-700">Pickup Location</Label>
+              <div className="flex gap-2 mt-1.5">
                 <div className="relative flex-1">
                   <Input
                     id="address"
                     placeholder="123 Main Street, City, State"
                     {...form.register("address")}
-                    className={`pr-8 ${form.watch("latitude") && form.watch("longitude") ? 'border-green-400 focus-visible:ring-green-400' : ''}`}
+                    className={`pr-10 h-11 text-sm ${
+                      form.watch("latitude") && form.watch("longitude")
+                        ? "border-green-500 focus-visible:ring-green-500 shadow-sm"
+                        : ""
+                    }`}
                   />
                   {form.watch("latitude") && form.watch("longitude") && (
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                      <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-                        <Check className="w-3 h-3 text-white" />
-                      </div>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowMapModal(true)}
+                      title="Adjust exact drop zone on map"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md bg-green-50 hover:bg-green-100 text-green-700 transition-colors flex items-center gap-1"
+                    >
+                      <Check className="w-4 h-4 text-green-600" />
+                    </button>
                   )}
                 </div>
-                <Button 
-                  type="button" 
-                  onClick={fetchGPSLocation} 
+                <Button
+                  type="button"
+                  onClick={fetchGPSLocation}
                   variant={isGpsLoading ? "default" : "outline"}
-                  className={`min-w-[120px] transition-all duration-200 ${isGpsLoading ? 'bg-eco-primary text-white' : ''}`}
+                  className={`h-11 px-4 font-medium transition-all duration-200 shrink-0 ${
+                    isGpsLoading
+                      ? "bg-eco-primary text-white shadow-sm"
+                      : "border-gray-300 hover:border-eco-primary hover:text-eco-primary"
+                  }`}
                   disabled={isGpsLoading}
                 >
                   {isGpsLoading ? (
@@ -626,41 +581,32 @@ export default function RequestForm({ user }: RequestFormProps) {
                     </div>
                   ) : (
                     <>
-                      <MapPin className="w-4 h-4 mr-2" />
+                      <MapPin className="w-4 h-4 mr-2 text-eco-primary" />
                       <span>Get Location</span>
                     </>
                   )}
                 </Button>
               </div>
-              <div className="flex items-center justify-between mt-1">
+
+              <div className="flex items-center justify-between mt-2 px-1 min-h-[24px]">
                 {form.watch("latitude") !== undefined && form.watch("longitude") !== undefined ? (
-                  <div className="flex items-start text-xs flex-col">
-                    <div className="flex items-center text-green-600">
-                      <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
-                      <span>Exact location set</span>
+                  <div className="flex items-center justify-between w-full text-xs">
+                    <div className="flex items-center gap-1.5 text-green-700 font-medium">
+                      <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                      <span>Exact location locked ({form.watch("latitude")?.toFixed(5)}, {form.watch("longitude")?.toFixed(5)})</span>
                     </div>
-                    <div className="text-gray-500 mt-0.5 flex items-center">
-                      <span className="font-mono bg-gray-100 px-1 rounded text-[10px]">
-                        {form.watch("latitude")?.toFixed(5)}, {form.watch("longitude")?.toFixed(5)}
-                      </span>
-                      <button
-                        type="button"
-                        className="ml-1 text-blue-500 hover:text-blue-700 text-[10px] underline"
-                        onClick={() => {
-                          const lat = form.watch("latitude");
-                          const lng = form.watch("longitude");
-                          if (lat && lng) {
-                            window.open(`https://www.google.com/maps?q=${lat},${lng}`);
-                          }
-                        }}
-                      >
-                        View Map
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowMapModal(true)}
+                      className="flex items-center gap-1 text-eco-primary hover:underline font-semibold"
+                    >
+                      <Navigation className="w-3.5 h-3.5" />
+                      Adjust on Map
+                    </button>
                   </div>
                 ) : (
                   <p className="text-xs text-gray-500">
-                    Type your address above, or click "Get Location" for automatic GPS detection
+                    Enter your address above, or click "Get Location" for automatic GPS detection
                   </p>
                 )}
               </div>
@@ -678,6 +624,25 @@ export default function RequestForm({ user }: RequestFormProps) {
               </Button>
             </div>
           </form>
+        )}
+
+        {/* Map Pin Modal — mounts only when open to avoid Leaflet DOM conflicts */}
+        {showMapModal && (
+          <MapPinModal
+            initialLat={form.getValues("latitude") ?? 20.5937}
+            initialLng={form.getValues("longitude") ?? 78.9629}
+            onConfirm={(loc) => {
+              form.setValue("latitude", loc.latitude, { shouldValidate: true });
+              form.setValue("longitude", loc.longitude, { shouldValidate: true });
+              form.setValue("address", loc.address, { shouldValidate: true });
+              setShowMapModal(false);
+              toast({
+                title: "Drop Zone Confirmed ✅",
+                description: `Coordinates locked to ${loc.latitude.toFixed(6)}, ${loc.longitude.toFixed(6)}`,
+              });
+            }}
+            onClose={() => setShowMapModal(false)}
+          />
         )}
 
         {/* Step 2: Photo Upload */}

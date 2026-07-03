@@ -224,6 +224,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           eWasteType,
           pickupDate: new Date(req.body.pickupDate),
           weight: req.body.weight.toString(),
+          latitude: req.body.latitude && req.body.latitude.toString().trim() !== "" ? req.body.latitude.toString() : undefined,
+          longitude: req.body.longitude && req.body.longitude.toString().trim() !== "" ? req.body.longitude.toString() : undefined,
         };
 
         const validated = insertPickupRequestSchema.parse(requestData);

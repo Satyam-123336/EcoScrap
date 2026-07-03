@@ -13,8 +13,8 @@ export default function PrivacyPolicy() {
           <CardContent className="p-8 prose prose-green max-w-none text-gray-700">
             <h2 className="text-2xl font-semibold text-gray-900 mt-0 mb-4">1. Introduction</h2>
             <p className="mb-6">
-              Welcome to EcoScrap Pickup. We respect your privacy and are committed to protecting your personal data. 
-              This privacy policy will inform you as to how we look after your personal data when you visit our website 
+              Welcome to EcoScrap Pickup. We respect your privacy and are committed to protecting your personal data.
+              This privacy policy will inform you as to how we look after your personal data when you visit our website
               (regardless of where you visit it from) and tell you about your privacy rights and how the law protects you.
             </p>
 
@@ -48,7 +48,7 @@ export default function PrivacyPolicy() {
             <p>
               If you have any questions about this privacy policy or our privacy practices, please contact us at: <br />
               <strong>Email:</strong> privacy@ecoscrappickup.com <br />
-              <strong>Address:</strong> 123 Green Initiative Way, Eco District, 10001
+              <strong>Address:</strong> Whitefield, Bengaluru, Karnataka, 560066
             </p>
           </CardContent>
         </Card>
