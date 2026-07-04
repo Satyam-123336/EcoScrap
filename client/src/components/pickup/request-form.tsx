@@ -88,9 +88,14 @@ export default function RequestForm({ user }: RequestFormProps) {
   const watchedSlot = form.watch("pickupTimeSlot");
 
   // Synchronize available time slots with current date & time
-  const todayStr = new Date().toISOString().split("T")[0];
+  // Use local date (not UTC) so IST/other timezone users get the correct "today"
+  const now = new Date();
+  const localYear = now.getFullYear();
+  const localMonth = String(now.getMonth() + 1).padStart(2, "0");
+  const localDay = String(now.getDate()).padStart(2, "0");
+  const todayStr = `${localYear}-${localMonth}-${localDay}`;
   const isSelectedDateToday = watchedDate === todayStr;
-  const currentHour = new Date().getHours();
+  const currentHour = now.getHours(); // local hour
 
   const isMorningExpired = isSelectedDateToday && currentHour >= 12;
   const isAfternoonExpired = isSelectedDateToday && currentHour >= 15;
@@ -495,7 +500,7 @@ export default function RequestForm({ user }: RequestFormProps) {
                     type="date"
                     {...form.register("pickupDate")}
                     className="mt-1"
-                    min={new Date().toISOString().split('T')[0]}
+                    min={todayStr}
                   />
                   {form.formState.errors.pickupDate?.message && (
                     <p className="text-sm text-red-500 mt-1">

@@ -90,7 +90,10 @@ export default function Footer() {
                     <Link href={link.href}>
                       <span 
                         onClick={() => {
-                          if (link.href.includes('#')) {
+                          if (link.href === "/" || link.href === "") {
+                            // Always scroll to very top of the page
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          } else if (link.href.includes('#')) {
                             const id = link.href.split('#')[1];
                             const elem = document.getElementById(id);
                             if (elem) {

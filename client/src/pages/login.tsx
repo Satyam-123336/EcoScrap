@@ -161,7 +161,7 @@ export default function Login() {
             Don&apos;t have an account?{" "}
             <Link href="/register">
               <span className="text-eco-primary hover:text-eco-green font-semibold cursor-pointer transition-colors">
-                Create one ?
+                Create one
               </span>
             </Link>
           </p>
