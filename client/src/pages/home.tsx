@@ -108,9 +108,15 @@ export default function Home({ user }: HomeProps) {
                     <ArrowRight className="w-4 h-4" />
                   </Button>
                 </Link>
-                <Button size="lg" variant="outline" className="border-white/20 text-white bg-white/8 backdrop-blur-sm hover:bg-white/15 h-12 rounded-xl gap-2 transition-all duration-300">
-                  <Play className="w-4 h-4" />
-                  How It Works
+                <Button asChild size="lg" variant="outline" className="border-white/20 text-white bg-white/8 backdrop-blur-sm hover:bg-white/15 h-12 rounded-xl gap-2 transition-all duration-300 cursor-pointer">
+                  <a
+                    href="https://drive.google.com/file/d/1DkqtS5k6DlcYXugHLfc9p5nM9nO04STe/view?usp=sharing"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Play className="w-4 h-4" />
+                    How It Works
+                  </a>
                 </Button>
               </div>
 

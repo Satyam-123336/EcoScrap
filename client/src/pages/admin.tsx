@@ -338,6 +338,34 @@ export default function Admin() {
                     
                 </div>
               </div>
+
+              {/* Live Flight Radar Embed */}
+              <div className="col-span-1 lg:col-span-2 mt-2 pt-4 border-t border-blue-200">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-2">
+                    <span className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                    </span>
+                    <h4 className="font-semibold text-gray-900">Live Drone Flight Radar & Telemetry Map</h4>
+                  </div>
+                  <a
+                    href="http://localhost:5003/map"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs bg-blue-600 hover:bg-blue-700 text-white font-medium px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 shadow-sm"
+                  >
+                    Open Fullscreen Radar ↗
+                  </a>
+                </div>
+                <div className="w-full h-96 rounded-xl overflow-hidden border border-blue-300 shadow-inner bg-slate-900 relative">
+                  <iframe
+                    src="http://localhost:5003/map"
+                    title="Live Drone Radar"
+                    className="w-full h-full border-0"
+                  />
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

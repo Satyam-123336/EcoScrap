@@ -1,9 +1,11 @@
 import axios from 'axios';
 import { storage } from './storage';
+import type { PickupRequest } from '@shared/schema';
 
 interface SimulationResponse {
   status: string;
   message?: string;
+  eta_seconds?: number;
 }
 
 interface MissionStatus {
@@ -28,22 +30,45 @@ class SimulationService {
   /**
    * Start a simulation mission for a pickup request
    */
+  /**
+   * Start a drone mission for a pickup request.
+   * Fetches the full request from DB to extract lat/lon/address
+   * and passes them to the drone bridge server.
+   */
   async startMission(requestId: string): Promise<boolean> {
     try {
-      console.log(`Starting simulation mission for pickup request: ${requestId}`);
+      console.log(`Starting drone mission for pickup request: ${requestId}`);
       
-      // Check if simulation server is available
+      // Check if drone bridge / simulation server is available
       const isAvailable = await this.checkSimulationServerHealth();
       if (!isAvailable) {
-        console.error('Simulation server is not available');
+        console.error('Drone bridge server is not available');
         return false;
       }
 
-      // Start the mission in CoppeliaSim
+      // Fetch pickup request to get GPS coordinates
+      const pickupRequest: PickupRequest | undefined = await storage.getPickupRequest(requestId);
+      if (!pickupRequest) {
+        console.error(`Pickup request not found: ${requestId}`);
+        return false;
+      }
+
+      // Build mission payload — drone bridge needs these to navigate
+      const missionPayload = {
+        request_id: requestId,
+        lat:        pickupRequest.latitude  ? parseFloat(pickupRequest.latitude)  : null,
+        lon:        pickupRequest.longitude ? parseFloat(pickupRequest.longitude) : null,
+        address:    pickupRequest.address   || '',
+        weight:     pickupRequest.weight    || '0',
+      };
+
+      console.log('Mission payload:', missionPayload);
+
+      // Send to drone bridge (or CoppeliaSim sim server — same API surface)
       const response = await axios.post<SimulationResponse>(
         `${this.simulationServerUrl}/start_mission`,
-        {},
-        { timeout: 5000 }
+        missionPayload,
+        { timeout: 10000 }  // 10s — drone needs time to initialize
       );
 
       if (response.data.status === 'mission_started') {
@@ -53,7 +78,8 @@ class SimulationService {
           startTime: new Date()
         };
         
-        console.log(`Mission started successfully for request ${requestId}`);
+        const eta = response.data.eta_seconds;
+        console.log(`Mission started for request ${requestId}${ eta ? ` — ETA ${eta}s` : '' }`);
         
         // Start monitoring the mission status
         this.startStatusMonitoring();
@@ -64,7 +90,7 @@ class SimulationService {
         return false;
       }
     } catch (error) {
-      console.error('Error starting simulation mission:', error);
+      console.error('Error starting drone mission:', error);
       return false;
     }
   }
@@ -399,5 +425,10 @@ class SimulationService {
 }
 
 // Export singleton instance
-export const simulationService = new SimulationService('http://localhost:5002');
+// Toggle between simulation and real drone via .env:
+//   DRONE_BRIDGE_URL=http://localhost:5002  → CoppeliaSim (simulation)
+//   DRONE_BRIDGE_URL=http://localhost:5003  → Real drone bridge
+export const simulationService = new SimulationService(
+  process.env.DRONE_BRIDGE_URL || 'http://localhost:5002'
+);
 export default simulationService;
